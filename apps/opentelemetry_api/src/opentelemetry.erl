@@ -126,19 +126,19 @@
 
 -spec set_default_tracer(tracer()) -> boolean().
 set_default_tracer(Tracer) ->
-    verify_and_set_term(Tracer, default_tracer, otel_tracer).
+    persistent_term:put({?MODULE, default_tracer}, Tracer).
 
 -spec set_tracer(atom(), tracer()) -> boolean().
 set_tracer(Name, Tracer) ->
-    verify_and_set_term(Tracer, Name, otel_tracer).
+    persistent_term:put({?MODULE, Name}, Tracer).
 
 -spec set_default_meter(meter()) -> boolean().
 set_default_meter(Meter) ->
-    verify_and_set_term(Meter, default_meter, otel_meter).
+    persistent_term:put({?MODULE, default_meter}, Meter).
 
 -spec set_meter(atom(), meter()) -> boolean().
 set_meter(Name, Meter) ->
-    verify_and_set_term(Meter, Name, otel_meter).
+    persistent_term:put({?MODULE, Name}, Meter).
 
 -spec register_tracer(atom(), string()) -> boolean().
 register_tracer(Name, Vsn) ->
@@ -352,37 +352,6 @@ uniform(X) ->
     rand:uniform(X).
 
 %% internal functions
-
--spec verify_and_set_term(module() | {module(), term()}, term(), atom()) -> boolean().
-verify_and_set_term(Module, TermKey, Behaviour) ->
-    case verify_behaviour(Module, Behaviour) of
-        true ->
-            persistent_term:put({?MODULE, TermKey}, Module),
-            true;
-        false ->
-            ?LOG_WARNING("Module ~p does not implement behaviour ~p. "
-                         "A noop ~p will be used until a module implementing "
-                         "the behaviour is configured.",
-                         [Module, Behaviour, Behaviour]),
-            false
-    end.
-
--spec verify_behaviour(module() | {module(), term()}, atom()) -> boolean().
-verify_behaviour({Module, _}, Behaviour) ->
-    verify_behaviour(Module, Behaviour);
-verify_behaviour(Module, Behaviour) ->
-    try Module:module_info(attributes) of
-        Attributes ->
-            case lists:keyfind(behaviour, 1, Attributes) of
-                {behaviour, Behaviours} ->
-                    lists:member(Behaviour, Behaviours);
-                _ ->
-                    false
-            end
-    catch
-        error:undef ->
-            false
-    end.
 
 %% for use in a filtermap
 %% return {true, Link} if a link is returned or return false
