@@ -126,19 +126,19 @@
 
 -spec set_default_tracer(tracer()) -> boolean().
 set_default_tracer(Tracer) ->
-    persistent_term:put({?MODULE, default_tracer}, Tracer).
+verify_and_set_term(default_tracer, Tracer).
 
 -spec set_tracer(atom(), tracer()) -> boolean().
 set_tracer(Name, Tracer) ->
-    persistent_term:put({?MODULE, Name}, Tracer).
+verify_and_set_term(Name, Tracer).
 
 -spec set_default_meter(meter()) -> boolean().
 set_default_meter(Meter) ->
-    persistent_term:put({?MODULE, default_meter}, Meter).
+verify_and_set_term(default_meter, Meter).
 
 -spec set_meter(atom(), meter()) -> boolean().
 set_meter(Name, Meter) ->
-    persistent_term:put({?MODULE, Name}, Meter).
+verify_and_set_term(Name, Meter).
 
 -spec register_tracer(atom(), string()) -> boolean().
 register_tracer(Name, Vsn) ->
@@ -352,6 +352,21 @@ uniform(X) ->
     rand:uniform(X).
 
 %% internal functions
+
+-spec verify_and_set_term(term(), module() | {module(), term()}) -> boolean().
+verify_and_set_term(TermKey, Module) ->
+    try Module:module_info() of
+        Attributes when is_list(Attributes) ->
+            persistent_term:put({?MODULE, TermKey}, Module),
+            true
+    catch
+        error:undef ->
+            ?LOG_WARNING("Module ~p does not exist. "
+                         "A noop Tracer/Meter will be used until a module implementing "
+                         "a Tracer/Meter is configured.",
+                         [Module]),
+            false
+    end.
 
 %% for use in a filtermap
 %% return {true, Link} if a link is returned or return false
